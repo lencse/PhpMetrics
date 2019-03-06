@@ -1,6 +1,7 @@
 <?php
 namespace Hal\Metric\Class_\Coupling;
 
+use Hal\Metric\ClassMetric;
 use Hal\Metric\Helper\MetricClassNameGenerator;
 use Hal\Metric\Metrics;
 use PhpParser\Node;
@@ -56,7 +57,6 @@ class ExternalsVisitor extends NodeVisitorAbstract
 
             $class = $this->metrics->get(MetricClassNameGenerator::getName($node));
             $parents = [];
-            $nodeClass = $node;
 
             $dependencies = [];
 
@@ -64,11 +64,11 @@ class ExternalsVisitor extends NodeVisitorAbstract
             if (isset($node->extends)) {
                 if (is_array($node->extends)) {
                     foreach ((array)$node->extends as $interface) {
-                        array_push($dependencies, (string)$interface);
+                        $this->pushToDependencies($dependencies, (string)$interface);
                         array_push($parents, (string)$interface);
                     }
                 } else {
-                    array_push($dependencies, (string)$node->extends);
+                    $this->pushToDependencies($dependencies, (string)$node->extends);
                     array_push($parents, (string)$node->extends);
                 }
             }
@@ -76,7 +76,7 @@ class ExternalsVisitor extends NodeVisitorAbstract
             // implements
             if (isset($node->implements)) {
                 foreach ($node->implements as $interface) {
-                    array_push($dependencies, (string)$interface);
+                    $this->pushToDependencies($dependencies, (string)$interface);
                 }
             }
 
@@ -85,7 +85,7 @@ class ExternalsVisitor extends NodeVisitorAbstract
                     // return
                     if (isset($stmt->returnType)) {
                         if ($stmt->returnType instanceof Node\Name\FullyQualified) {
-                            array_push($dependencies, (string)$stmt->returnType);
+                            $this->pushToDependencies($dependencies, (string)$stmt->returnType);
                         }
                     }
 
@@ -93,7 +93,7 @@ class ExternalsVisitor extends NodeVisitorAbstract
                     foreach ($stmt->params as $param) {
                         if ($param->type) {
                             if ($param->type instanceof Node\Name\FullyQualified) {
-                                array_push($dependencies, (string)$param->type);
+                                $this->pushToDependencies($dependencies, (string)$param->type);
                             }
                         }
                     }
@@ -103,11 +103,11 @@ class ExternalsVisitor extends NodeVisitorAbstract
                         switch (true) {
                             case $node instanceof Node\Expr\New_:
                                 // new MyClass
-                                array_push($dependencies, getNameOfNode($node));
+                                $this->pushToDependencies($dependencies, getNameOfNode($node));
                                 break;
                             case $node instanceof Node\Expr\StaticCall:
                                 // MyClass::Call
-                                array_push($dependencies, getNameOfNode($node));
+                                $this->pushToDependencies($dependencies, getNameOfNode($node));
                                 break;
                         }
                     });
@@ -119,12 +119,12 @@ class ExternalsVisitor extends NodeVisitorAbstract
                             foreach ($this->uses as $use) {
                                 if (method_exists($use, 'getAlias')) {
                                     if (((string) $use->getAlias()) === $check) {
-                                        array_push($dependencies, (string)($use->name));
+                                        $this->pushToDependencies($dependencies, (string)($use->name));
                                     }
                                     continue;
                                 }
                                 if ($use->alias === $check) {
-                                    array_push($dependencies, (string)($use->name));
+                                    $this->pushToDependencies($dependencies, (string)($use->name));
                                 }
                             }
                         }
@@ -135,6 +135,14 @@ class ExternalsVisitor extends NodeVisitorAbstract
             $class->set('externals', $dependencies);
             $class->set('parents', $parents);
         }
+    }
+
+    private function pushToDependencies(array &$dependencies, $dependency)
+    {
+        if ('self' === strtolower($dependency)) {
+            return;
+        }
+        array_push($dependencies, (string) $dependency);
     }
 }
 
