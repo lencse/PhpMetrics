@@ -1,7 +1,6 @@
 <?php
 namespace Hal\Metric\Class_\Coupling;
 
-use Hal\Metric\ClassMetric;
 use Hal\Metric\Helper\MetricClassNameGenerator;
 use Hal\Metric\Metrics;
 use PhpParser\Node;
@@ -139,7 +138,8 @@ class ExternalsVisitor extends NodeVisitorAbstract
 
     private function pushToDependencies(array &$dependencies, $dependency)
     {
-        if ('self' === strtolower($dependency)) {
+        $lowercase = strtolower($dependency);
+        if ('self' === $lowercase || 'parent' === $lowercase) {
             return;
         }
         array_push($dependencies, (string) $dependency);

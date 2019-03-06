@@ -23,7 +23,10 @@ namespace {
 
     }
     class E extends D implements F, G {
-
+        public function __construct()
+        {
+            parent::__construct();
+        }
     }
     interface F extends G, H {
 
